@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Search POC - ValueSERP</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding: 24px; }
+    .query-row { margin-bottom: 8px; }
+    textarea.snippet { width: 100%; height: 3.0rem; resize: vertical; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>Simple Search POC (ValueSERP)</h3>
+    <p class="text-muted">Enter one or more search keywords.</p>
+
+    {% if errors %}
+      <div class="alert alert-warning">
+        <ul class="mb-0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <form method="post" id="search-form">
+      {% csrf_token %}
+      <div id="queries">
+        <!-- provide one starter input -->
+        <div class="query-row d-flex" data-index="0">
+          <input name="query" class="form-control me-2" placeholder="Enter keyword (e.g. Cricket match)" required>
+          <button type="button" class="btn btn-outline-danger btn-remove">Remove</button>
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <button type="button" id="add-more" class="btn btn-sm btn-secondary">+ Add more</button>
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a href="{% url 'download_csv' %}" class="btn btn-success">Download CSV</a>
+      </div>
+    </form>
+
+    <hr>
+
+    {% if results_grouped %}
+      <h5>Results</h5>
+      {% for group in results_grouped %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <h6 class="card-title">Query: <strong>{{ group.query }}</strong></h6>
+            {% if group.error %}
+              <div class="alert alert-danger">Error: {{ group.error }}</div>
+            {% else %}
+              {% if group.results %}
+                <table class="table table-sm">
+                  <thead>
+                    <tr><th>#</th><th>Title</th><th>Link</th><th>Snippet</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for r in group.results %}
+                      <tr>
+                        <td>{{ r.rank }}</td>
+                        <td>{{ r.title }}</td>
+                        <td>
+                          {% if r.link %}
+                            <a href="{{ r.link }}" target="_blank" rel="noopener noreferrer">{{ r.link|truncatechars:60 }}</a>
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                        <td><textarea class="snippet" readonly>{{ r.snippet }}</textarea></td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <div class="text-muted">No results found for this query.</div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+<script>
+(function(){
+  // simple add/remove inputs
+  const queries = document.getElementById('queries');
+  const addBtn = document.getElementById('add-more');
+
+  function makeRow(){
+    const row = document.createElement('div');
+    row.className = 'query-row d-flex';
+    row.innerHTML = '<input name="query" class="form-control me-2" placeholder="Enter keyword" required>' +
+                    '<button type="button" class="btn btn-outline-danger btn-remove">Remove</button>';
+    return row;
+  }
+
+  addBtn.addEventListener('click', function(){
+    queries.appendChild(makeRow());
+  });
+
+  // remove handler (event delegation)
+  queries.addEventListener('click', function(e){
+    if (e.target && e.target.classList.contains('btn-remove')){
+      const row = e.target.closest('.query-row');
+      if (row) {
+        // keep at least one input
+        if (queries.querySelectorAll('.query-row').length > 1) {
+          row.remove();
+        } else {
+          // clear the only input instead of removing
+          row.querySelector('input[name="query"]').value = '';
+        }
+      }
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
